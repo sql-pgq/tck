@@ -10,4 +10,9 @@ from conftest import *  # noqa: F401, F403
 
 # Load all GRAPH_TABLE scenarios
 scenarios('../../features/graph_table/NodePatterns1.feature')
+scenarios('../../features/graph_table/NodePatterns2.feature')
 scenarios('../../features/graph_table/EdgePatterns1.feature')
+scenarios('../../features/graph_table/EdgePatterns2.feature')
+scenarios('../../features/graph_table/PathQuantifiers.feature')
+scenarios('../../features/graph_table/Expressions.feature')
+scenarios('../../features/graph_table/Aggregations.feature')

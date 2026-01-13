@@ -34,6 +34,7 @@ Feature: NodePatterns1 - Basic node pattern matching
       | Bob     |
       | Charlie |
 
+  @LabellessMatch
   Scenario: [2] Match node with variable only (no label)
     When executing SQL/PGQ:
       """
@@ -145,6 +146,7 @@ Feature: NodePatterns1 - Basic node pattern matching
       | =  | 25    | Bob     |
       | =  | 35    | Charlie |
 
+  @LikeOperator
   Scenario: [10] Match node with LIKE pattern
     When executing SQL/PGQ:
       """

@@ -10,3 +10,4 @@ from conftest import *  # noqa: F401, F403
 
 # Load all DDL scenarios
 scenarios('../../features/ddl/CreatePropertyGraph1.feature')
+scenarios('../../features/ddl/CreatePropertyGraph2.feature')

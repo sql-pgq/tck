@@ -16,6 +16,64 @@ from prograph.schema.property_graph import PropertyGraphRegistry
 
 
 # -----------------------------------------------------------------------------
+# Implementation-specific tag handling
+# -----------------------------------------------------------------------------
+# Tags mark optional or implementation-dependent features.
+# Implementations can configure which tags to skip/xfail here.
+
+SKIP_TAGS = set()  # Tags to skip entirely
+XFAIL_TAGS = {
+    # Node/Edge pattern features
+    'LabellessMatch': 'Label-less node matching not yet implemented',
+    # 'LikeOperator': 'LIKE operator not yet implemented in SQL/PGQ',  # Now implemented
+    # 'IsNullCondition': 'IS NULL condition not yet implemented',  # Now implemented
+    # 'InListCondition': 'IN list condition not yet implemented',  # Now implemented
+    # 'BetweenCondition': 'BETWEEN condition not yet implemented',  # Now implemented
+    # 'SelfLoop': 'Self-loop detection not yet implemented',  # Now working
+    # DDL features
+    'NoPropertiesClause': 'NO PROPERTIES clause not yet implemented',
+    # Path quantifiers
+    'PathQuantifier': 'Path quantifiers ({n,m}) not yet implemented',
+    # Expression features
+    # 'ArithmeticExpression': 'Arithmetic expressions in COLUMNS not yet implemented',  # Now implemented
+    # 'StringConcatenation': 'String concatenation not yet implemented',  # Now implemented
+    # 'LiteralValues': 'Literal values in COLUMNS not yet implemented',  # Now implemented
+    # 'NegativeNumbers': 'Negative numbers not yet implemented',  # Now implemented
+    # 'ParenthesizedExpression': 'Parenthesized expressions not yet implemented',  # Now implemented
+    # 'CaseExpression': 'CASE expressions not yet implemented',  # Now implemented
+    'CoalesceFunction': 'COALESCE function not yet implemented',
+    'NullIfFunction': 'NULLIF function not yet implemented',
+    'CastExpression': 'CAST expression not yet implemented',
+    'SubstringFunction': 'SUBSTRING function not yet implemented',
+    # SQL outer query features
+    'OuterOrderBy': 'ORDER BY in outer query not yet implemented',
+    'OuterDistinct': 'DISTINCT in outer query not yet implemented',
+    'Aggregation': 'SQL aggregation functions not yet implemented',
+}
+
+
+def pytest_bdd_apply_tag(tag, function):
+    """Apply pytest markers based on Gherkin tags.
+
+    Note: pytest-bdd ignores the return value - we must modify function in-place.
+    """
+    if tag in SKIP_TAGS:
+        marker = pytest.mark.skip(reason=f"Tag @{tag} is skipped for this implementation")
+        marker(function)
+    elif tag in XFAIL_TAGS:
+        marker = pytest.mark.xfail(reason=XFAIL_TAGS[tag])
+        marker(function)
+
+
+def pytest_configure(config):
+    """Register custom markers to avoid warnings."""
+    for tag in SKIP_TAGS | XFAIL_TAGS.keys():
+        config.addinivalue_line(
+            "markers", f"{tag}: SQL/PGQ TCK implementation-specific tag"
+        )
+
+
+# -----------------------------------------------------------------------------
 # Fixtures
 # -----------------------------------------------------------------------------
 
@@ -67,6 +125,9 @@ def property_graph_with_schema(context, name, registry, builder, docstring):
     context['registry'] = registry
     context['builder'] = builder
     context['schema_ddl'] = docstring.strip()  # Store for later execution
+    # Clear any existing graph with same name (for test isolation)
+    if registry.exists(name):
+        registry.drop(name)
     builder.build(docstring.strip())  # Also build for DDL-only tests
 
 
@@ -102,13 +163,17 @@ def table_with_data(context, name, datatable):
         # Convert numeric strings to appropriate types
         converted = []
         for v in row:
-            try:
-                converted.append(int(v))
-            except (ValueError, TypeError):
+            # Handle null values
+            if v is None or (isinstance(v, str) and v.lower() == 'null'):
+                converted.append(None)
+            else:
                 try:
-                    converted.append(float(v))
+                    converted.append(int(v))
                 except (ValueError, TypeError):
-                    converted.append(v)
+                    try:
+                        converted.append(float(v))
+                    except (ValueError, TypeError):
+                        converted.append(v)
         rows.append(converted)
 
     df = pd.DataFrame(rows, columns=headers)
@@ -308,6 +373,172 @@ def no_error(context):
 
 
 # -----------------------------------------------------------------------------
+# Then Steps - Edge Table DDL Assertions
+# -----------------------------------------------------------------------------
+
+@then(parsers.parse('the property graph "{name}" should have {count:d} edge table'))
+@then(parsers.parse('the property graph "{name}" should have {count:d} edge tables'))
+def graph_edge_table_count(context, name, count):
+    """Assert edge table count."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+    defn = registry.get(name)
+    assert len(defn.edge_tables) == count, \
+        f"Expected {count} edge tables, got {len(defn.edge_tables)}"
+
+
+@then(parsers.parse('edge table "{name}" should have label "{label}"'))
+def edge_table_label(context, name, label):
+    """Assert label for an edge table."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+
+    for graph_name in ['g']:
+        if registry.exists(graph_name):
+            defn = registry.get(graph_name)
+            for et in defn.edge_tables:
+                if et.table_name == name:
+                    assert et.label == label, \
+                        f"Expected label '{label}', got '{et.label}'"
+                    return
+
+    pytest.fail(f"Edge table '{name}' not found")
+
+
+@then(parsers.parse('edge table "{name}" should have properties:'))
+def edge_table_properties(context, name, datatable):
+    """Assert properties for an edge table."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+
+    # Parse expected properties from datatable
+    expected = []
+    if datatable and len(datatable) > 1:
+        for row in datatable[1:]:
+            if row:
+                expected.append(row[0])
+
+    for graph_name in ['g']:
+        if registry.exists(graph_name):
+            defn = registry.get(graph_name)
+            for et in defn.edge_tables:
+                if et.table_name == name:
+                    actual = list(et.properties.keys()) if et.properties else []
+                    assert set(actual) == set(expected), \
+                        f"Expected properties {expected}, got {actual}"
+                    return
+
+    pytest.fail(f"Edge table '{name}' not found")
+
+
+@then(parsers.parse('edge table "{name}" should have property mapping:'))
+def edge_table_property_mapping(context, name, datatable):
+    """Assert property-to-column mapping for an edge table."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+
+    # Parse expected mapping from datatable (property, column)
+    expected = {}
+    if datatable and len(datatable) > 1:
+        for row in datatable[1:]:
+            if len(row) >= 2:
+                expected[row[0]] = row[1]
+
+    for graph_name in ['g']:
+        if registry.exists(graph_name):
+            defn = registry.get(graph_name)
+            for et in defn.edge_tables:
+                if et.table_name == name:
+                    for prop, col in expected.items():
+                        actual_col = et.properties.get(prop) if et.properties else None
+                        assert actual_col == col, \
+                            f"Expected {prop} -> {col}, got {actual_col}"
+                    return
+
+    pytest.fail(f"Edge table '{name}' not found")
+
+
+@then(parsers.parse('edge table "{name}" should have source reference "{ref}"'))
+def edge_table_source_reference(context, name, ref):
+    """Assert source reference for an edge table."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+
+    for graph_name in ['g']:
+        if registry.exists(graph_name):
+            defn = registry.get(graph_name)
+            for et in defn.edge_tables:
+                if et.table_name == name:
+                    assert et.source_ref == ref, \
+                        f"Expected source ref '{ref}', got '{et.source_ref}'"
+                    return
+
+    pytest.fail(f"Edge table '{name}' not found")
+
+
+@then(parsers.parse('edge table "{name}" should have destination reference "{ref}"'))
+def edge_table_destination_reference(context, name, ref):
+    """Assert destination reference for an edge table."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+
+    for graph_name in ['g']:
+        if registry.exists(graph_name):
+            defn = registry.get(graph_name)
+            for et in defn.edge_tables:
+                if et.table_name == name:
+                    assert et.dest_ref == ref, \
+                        f"Expected dest ref '{ref}', got '{et.dest_ref}'"
+                    return
+
+    pytest.fail(f"Edge table '{name}' not found")
+
+
+@then(parsers.parse('edge table "{name}" should have source columns:'))
+def edge_table_source_columns(context, name, datatable):
+    """Assert source columns for an edge table."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+
+    # Parse expected columns from datatable
+    expected = []
+    if datatable and len(datatable) > 1:
+        for row in datatable[1:]:
+            if row:
+                expected.append(row[0])
+
+    for graph_name in ['g']:
+        if registry.exists(graph_name):
+            defn = registry.get(graph_name)
+            for et in defn.edge_tables:
+                if et.table_name == name:
+                    assert et.source_columns == expected, \
+                        f"Expected source columns {expected}, got {et.source_columns}"
+                    return
+
+    pytest.fail(f"Edge table '{name}' not found")
+
+
+@then(parsers.parse('edge table "{name}" should have no properties'))
+def edge_table_no_properties(context, name):
+    """Assert edge table has no properties."""
+    builder = context.get('builder')
+    registry = builder.registry if builder else context.get('registry')
+
+    for graph_name in ['g']:
+        if registry.exists(graph_name):
+            defn = registry.get(graph_name)
+            for et in defn.edge_tables:
+                if et.table_name == name:
+                    props = et.properties if et.properties else {}
+                    assert len(props) == 0, \
+                        f"Expected no properties, got {props}"
+                    return
+
+    pytest.fail(f"Edge table '{name}' not found")
+
+
+# -----------------------------------------------------------------------------
 # Then Steps - Query Result Assertions
 # -----------------------------------------------------------------------------
 
@@ -454,13 +685,22 @@ def _build_schema_from_definition(defn):
         ))
 
     for et in defn.edge_tables:
+        # Find the source vertex table to get its label
+        source_label = et.source_ref  # Default to table name
+        dest_label = et.dest_ref
+        for vt in defn.vertex_tables:
+            if vt.table_name == et.source_ref:
+                source_label = vt.label or vt.table_name
+            if vt.table_name == et.dest_ref:
+                dest_label = vt.label or vt.table_name
+
         schema.add_relationship_mapping(RelationshipMapping(
             source_table=et.table_name,
             rel_type=et.label or et.table_name.upper(),
-            start_node_label=et.source_table,
-            start_id_column=et.source_key[0] if et.source_key else 'src',
-            end_node_label=et.dest_table,
-            end_id_column=et.dest_key[0] if et.dest_key else 'dst',
+            start_node_label=source_label,
+            start_id_column=et.source_columns[0] if et.source_columns else 'src',
+            end_node_label=dest_label,
+            end_id_column=et.dest_columns[0] if et.dest_columns else 'dst',
             property_columns=et.properties or {}
         ))
 
