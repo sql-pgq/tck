@@ -2,8 +2,13 @@
 
 This module provides step definitions for running SQL/PGQ TCK tests
 against the ProGraph implementation.
+
+Supports both Pandas and Spark backends via --backend option:
+    pytest --backend=pandas  (default)
+    pytest --backend=spark
 """
 
+import os
 import pytest
 from pytest_bdd import given, when, then, parsers
 import pandas as pd
@@ -13,6 +18,28 @@ from prograph import ProGraph
 from prograph.plan import SQLPGQPlanBuilder
 from prograph.schema import GraphSchema, NodeMapping, RelationshipMapping
 from prograph.schema.property_graph import PropertyGraphRegistry
+
+# Spark imports (optional)
+_spark_session = None
+
+
+def get_spark_session():
+    """Get or create a SparkSession for Spark backend tests."""
+    global _spark_session
+    if _spark_session is None:
+        from pyspark.sql import SparkSession
+        _spark_session = SparkSession.builder \
+            .appName("SQL-PGQ-TCK") \
+            .master("local[*]") \
+            .config("spark.driver.memory", "2g") \
+            .getOrCreate()
+        _spark_session.sparkContext.setLogLevel("WARN")
+    return _spark_session
+
+
+def pandas_to_spark(pdf, spark):
+    """Convert pandas DataFrame to Spark DataFrame."""
+    return spark.createDataFrame(pdf)
 
 
 # -----------------------------------------------------------------------------
@@ -32,8 +59,8 @@ XFAIL_TAGS = {
     # 'SelfLoop': 'Self-loop detection not yet implemented',  # Now working
     # DDL features
     'NoPropertiesClause': 'NO PROPERTIES clause not yet implemented',
-    # Path quantifiers
-    'PathQuantifier': 'Path quantifiers ({n,m}) not yet implemented',
+    # Path quantifiers - now implemented
+    # 'PathQuantifier': 'Path quantifiers ({n,m}) not yet implemented',
     # Expression features
     # 'ArithmeticExpression': 'Arithmetic expressions in COLUMNS not yet implemented',  # Now implemented
     # 'StringConcatenation': 'String concatenation not yet implemented',  # Now implemented
@@ -41,10 +68,10 @@ XFAIL_TAGS = {
     # 'NegativeNumbers': 'Negative numbers not yet implemented',  # Now implemented
     # 'ParenthesizedExpression': 'Parenthesized expressions not yet implemented',  # Now implemented
     # 'CaseExpression': 'CASE expressions not yet implemented',  # Now implemented
-    'CoalesceFunction': 'COALESCE function not yet implemented',
-    'NullIfFunction': 'NULLIF function not yet implemented',
-    'CastExpression': 'CAST expression not yet implemented',
-    'SubstringFunction': 'SUBSTRING function not yet implemented',
+    # 'CoalesceFunction': 'COALESCE function not yet implemented',  # Now implemented
+    # 'NullIfFunction': 'NULLIF function not yet implemented',  # Now implemented
+    # 'CastExpression': 'CAST expression not yet implemented',  # Now implemented
+    # 'SubstringFunction': 'SUBSTRING function not yet implemented',  # Now implemented
     # SQL outer query features
     'OuterOrderBy': 'ORDER BY in outer query not yet implemented',
     'OuterDistinct': 'DISTINCT in outer query not yet implemented',
@@ -65,12 +92,25 @@ def pytest_bdd_apply_tag(tag, function):
         marker(function)
 
 
+def pytest_addoption(parser):
+    """Add command line options for backend selection."""
+    parser.addoption(
+        "--backend",
+        action="store",
+        default="pandas",
+        choices=["pandas", "spark"],
+        help="Backend to use for tests: pandas (default) or spark"
+    )
+
+
 def pytest_configure(config):
     """Register custom markers to avoid warnings."""
     for tag in SKIP_TAGS | XFAIL_TAGS.keys():
         config.addinivalue_line(
             "markers", f"{tag}: SQL/PGQ TCK implementation-specific tag"
         )
+    # Store backend choice for access in fixtures
+    config.backend = config.getoption("--backend")
 
 
 # -----------------------------------------------------------------------------
@@ -90,8 +130,9 @@ def builder(registry):
 
 
 @pytest.fixture
-def context():
+def context(request):
     """Shared context for passing data between steps."""
+    backend = request.config.backend
     return {
         'registry': None,
         'builder': None,
@@ -100,6 +141,7 @@ def context():
         'error': None,
         'tables': {},
         'schema': None,
+        'backend': backend,
     }
 
 
@@ -204,10 +246,19 @@ def execute_sqlpgq(context, docstring):
                     defn = registry.get(graph_name)
                     schema = _build_schema_from_definition(defn)
 
+                    # Get backend from context (pandas or spark)
+                    backend = context.get('backend', 'pandas')
+                    tables = context['tables']
+
+                    # Convert to Spark DataFrames if using Spark backend
+                    if backend == 'spark':
+                        spark = get_spark_session()
+                        tables = {name: pandas_to_spark(df, spark) for name, df in tables.items()}
+
                     engine = ProGraph(
-                        backend='pandas',
+                        backend=backend,
                         schema=schema,
-                        dataframes=context['tables']
+                        dataframes=tables
                     )
                     context['engine'] = engine
 
@@ -587,6 +638,13 @@ def result_in_any_order(context, datatable):
             if isinstance(expected_val, (int, float)) and isinstance(actual_val, (int, float)):
                 assert actual_val == expected_val, \
                     f"Column '{key}': expected {expected_val}, got {actual_val}"
+            # Handle null comparison (Python None vs 'null' string in feature files)
+            elif expected_val == 'null' or str(expected_val).lower() == 'null':
+                assert actual_val is None, \
+                    f"Column '{key}': expected null, got {actual_val}"
+            elif actual_val is None:
+                assert expected_val == 'null' or str(expected_val).lower() == 'null', \
+                    f"Column '{key}': expected {expected_val}, got null"
             else:
                 assert str(actual_val) == str(expected_val), \
                     f"Column '{key}': expected {expected_val}, got {actual_val}"
