@@ -1,0 +1,28 @@
+[project]
+name = "sql-pgq-tck"
+version = "0.1.0"
+description = "Technology Compatibility Kit for SQL/PGQ (SQL:2023 Part 16, ISO/IEC 9075-16)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+dependencies = []
+
+# The specification is the Gherkin under features/. Running it against an engine
+# needs a binding, and each binding brings its own dependencies — nothing here
+# is required to *read* the suite, only to execute it.
+[project.optional-dependencies]
+python = [
+    "pytest>=7.0",
+    "pytest-bdd>=6.0",
+    "pandas>=1.5",
+]
+# The reference binding drives ProGraph. Installed separately so the TCK never
+# depends on the engine it tests by default: another implementation's binding
+# should not have to install this one's.
+prograph = ["prograph"]
+
+[tool.pytest.ini_options]
+testpaths = ["implementations/python"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
