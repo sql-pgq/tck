@@ -25,3 +25,7 @@ testpaths = ["implementations/python"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+# A scenario a binding declared unimplemented, which then passes, is a stale
+# claim that the engine is less capable than it is. Strict xfail turns that
+# from a line of run output nobody reads into a failure.
+xfail_strict = true

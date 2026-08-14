@@ -1,5 +1,7 @@
 # SQL/PGQ TCK
 
+[![TCK](https://github.com/sql-pgq/tck/actions/workflows/tck.yml/badge.svg)](https://github.com/sql-pgq/tck/actions/workflows/tck.yml)
+
 A Technology Compatibility Kit for **SQL/PGQ** — SQL:2023 Part 16 (ISO/IEC
 9075-16), the property-graph query extension to SQL.
 
@@ -120,10 +122,12 @@ Every scenario carries a tag naming the construct it exercises
 not implement in `XFAIL_TAGS`, with a reason, and those scenarios become xfails
 instead of failures.
 
-That table describes **the engine**, not the standard. An entry whose scenario
-starts passing surfaces as `XPASS` and should be deleted. Keeping the list
-explicit and small is the point: a silently skipped conformance test reads
-exactly like a passing one, which is the failure mode a TCK exists to prevent.
+That table describes **the engine**, not the standard. Keeping the list explicit
+and small is the point: a silently skipped conformance test reads exactly like a
+passing one, which is the failure mode a TCK exists to prevent. `xfail_strict`
+is on, so an entry whose scenario starts passing fails the build until the entry
+is removed — the list is not allowed to accumulate claims that stopped being
+true.
 
 ## Writing a binding
 
@@ -172,13 +176,12 @@ reliable way to tell a regression you introduced from a gap you inherited.
 ## Contributing
 
 Scenarios are the contribution that matters most, particularly in the areas
-listed as absent above. A scenario that encodes an *interpretation* of the
-standard rather than its plain text should say so in a comment — being explicit
-about which reading a test assumes is what makes disagreement about it
-productive.
+listed as absent above. Bug reports citing a scenario number and a failing
+engine are the second most useful thing.
 
-Bug reports that cite a scenario number and a failing engine are the second most
-useful thing.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and for the one rule
+the suite depends on: a scenario is never deleted or weakened because an engine
+cannot pass it.
 
 ## History
 

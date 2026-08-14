@@ -1,0 +1,44 @@
+name: TCK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # A conformance suite that only runs when someone remembers to run it decays
+  # into a claim. The weekly build catches the case this repo is most exposed
+  # to: nothing here changed, but the engine under test did.
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  python-binding:
+    name: python binding (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      # One Python version failing must not hide whether the others pass.
+      fail-fast: false
+      matrix:
+        # The ends of the range pyproject.toml claims to support, plus a middle.
+        python-version: ["3.9", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the suite
+        run: pip install -e ".[python]"
+
+      - name: Install the engine under test
+        # ProGraph is not on PyPI, and this tracks its tip rather than a
+        # release: a red build caused by an engine change is a result, not a
+        # nuisance. That is the whole point of running conformance in CI.
+        run: pip install "prograph @ git+https://gitlab.com/briceg/prograph.git"
+
+      - name: Run the TCK
+        # xfail_strict is on, so a scenario that starts passing fails the build
+        # until its entry is removed from XFAIL_TAGS. See CONTRIBUTING.md.
+        run: pytest -q
