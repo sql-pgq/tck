@@ -1,6 +1,11 @@
 """SQL/PGQ TCK - GRAPH_TABLE Tests.
 
-This module runs the GRAPH_TABLE feature files (node patterns, edge patterns).
+Runs every feature file under ``features/graph_table/``.
+
+The directory is passed to ``scenarios()`` rather than each file being listed,
+so adding a feature file is enough to have it run. Listing them individually
+meant a new file was collected by nobody and reported by nothing, which reads
+exactly like a passing run: the failure mode this suite exists to prevent.
 """
 
 from pytest_bdd import scenarios
@@ -8,11 +13,4 @@ from pytest_bdd import scenarios
 # Import step definitions from conftest
 from conftest import *  # noqa: F401, F403
 
-# Load all GRAPH_TABLE scenarios
-scenarios('../../features/graph_table/NodePatterns1.feature')
-scenarios('../../features/graph_table/NodePatterns2.feature')
-scenarios('../../features/graph_table/EdgePatterns1.feature')
-scenarios('../../features/graph_table/EdgePatterns2.feature')
-scenarios('../../features/graph_table/PathQuantifiers.feature')
-scenarios('../../features/graph_table/Expressions.feature')
-scenarios('../../features/graph_table/Aggregations.feature')
+scenarios('../../features/graph_table')

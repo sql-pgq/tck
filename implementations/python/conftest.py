@@ -60,8 +60,6 @@ def pandas_to_spark(pdf, spark):
 
 SKIP_TAGS = set()  # Tags to skip entirely
 XFAIL_TAGS = {
-    # DDL
-    'NoPropertiesClause': 'NO PROPERTIES clause not yet implemented',
     # SQL query surrounding the GRAPH_TABLE
     'OuterOrderBy': 'ORDER BY in outer query not yet implemented',
     'OuterDistinct': 'DISTINCT in outer query not yet implemented',

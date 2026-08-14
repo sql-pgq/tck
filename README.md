@@ -147,7 +147,7 @@ scenario encodes an interpretation that deserves to be argued in public.
 
 ## Coverage
 
-97 scenarios (99 tests, after one `Scenario Outline` expands).
+110 scenarios (112 tests, after one `Scenario Outline` expands).
 
 | Area | Files | Scenarios |
 |---|---|---|
@@ -155,20 +155,21 @@ scenario encodes an interpretation that deserves to be argued in public.
 | Node patterns | `NodePatterns1/2` | 20 |
 | Edge patterns | `EdgePatterns1/2` | 20 |
 | Expressions and functions | `Expressions` | 15 |
-| Aggregation | `Aggregations` | 10 |
+| Label expressions | `LabelExpressions` | 13 |
 | Path quantifiers | `PathQuantifiers` | 12 |
+| Aggregation | `Aggregations` | 10 |
 
 Known to be absent, listed so the gaps are visible rather than merely unmet:
 
 - `ONE ROW PER MATCH` / `ONE ROW PER VERTEX` / `ONE ROW PER STEP`
 - Path modes and search prefixes: `TRAIL`, `ACYCLIC`, `ANY`, `ALL SHORTEST`
-- `PROPERTIES ARE ALL COLUMNS`, label expressions, `IS LABELED`
+- `PROPERTIES ARE ALL COLUMNS` and `IS LABELED`
 - Literals and the type system as a category of their own
 - Anything in the outer SQL query beyond the handful of tagged scenarios
 
 ## Baseline
 
-Against ProGraph, at the time of writing: **86 passed, 13 xfailed, 0 failed.**
+Against ProGraph, at the time of writing: **99 passed, 13 xfailed, 0 failed.**
 
 Record the equivalent number for your binding. Comparing counts is the only
 reliable way to tell a regression you introduced from a gap you inherited.
