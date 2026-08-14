@@ -65,19 +65,14 @@ XFAIL_TAGS = {
     'OuterDistinct': 'DISTINCT in outer query not yet implemented',
     'Aggregation': 'SQL aggregation functions not yet implemented',
 
-    # Parsed and then discarded. These are worse than an unimplemented
-    # construct: the query is accepted, no error is raised, and the answer is
-    # wrong. The engine returns unfiltered rows for an element WHERE, every
-    # path for a reducing prefix, and NULL for a path function. Recorded here
-    # so the gap is visible while it is fixed.
+    # Parsed and then discarded. Worse than an unimplemented construct: the
+    # query is accepted, no error is raised, and the answer is wrong. The
+    # engine returns every path where the prefix asks for one. Recorded here so
+    # the gap stays visible while it is fixed.
     'PathPrefixAny': 'ANY is parsed and ignored, so every matching path is '
                      'returned rather than one',
     'PathPrefixShortest': 'ALL/ANY SHORTEST and SHORTEST k are parsed and '
                           'ignored, so path length does not reduce the result',
-    'PathLength': 'PATH_LENGTH is parsed and returns NULL',
-    'PathVertices': 'VERTICES is parsed and returns NULL',
-    'PathEdges': 'EDGES is parsed and returns NULL',
-    'ElementId': 'ELEMENT_ID is parsed and returns NULL',
 }
 
 
