@@ -64,15 +64,6 @@ XFAIL_TAGS = {
     'OuterOrderBy': 'ORDER BY in outer query not yet implemented',
     'OuterDistinct': 'DISTINCT in outer query not yet implemented',
     'Aggregation': 'SQL aggregation functions not yet implemented',
-
-    # Parsed and then discarded. Worse than an unimplemented construct: the
-    # query is accepted, no error is raised, and the answer is wrong. The
-    # engine returns every path where the prefix asks for one. Recorded here so
-    # the gap stays visible while it is fixed.
-    'PathPrefixAny': 'ANY is parsed and ignored, so every matching path is '
-                     'returned rather than one',
-    'PathPrefixShortest': 'ALL/ANY SHORTEST and SHORTEST k are parsed and '
-                          'ignored, so path length does not reduce the result',
 }
 
 

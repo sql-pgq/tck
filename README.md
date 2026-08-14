@@ -172,17 +172,18 @@ Known to be absent, listed so the gaps are visible rather than merely unmet:
 
 ## Baseline
 
-Against ProGraph, at the time of writing: **125 passed, 17 xfailed, 0 failed.**
+Against ProGraph, at the time of writing: **129 passed, 13 xfailed, 0 failed.**
 
-The xfails that remain are worth reading. They are not unimplemented syntax
-that raises; they are constructs the engine parses and then discards, so the
-query is accepted, nothing is raised, and the answer is wrong: a reducing path
-prefix returns every path. A scenario is the only thing that tells that apart
-from working, which is the argument for this suite in one paragraph.
+The xfails that remain are all in the SQL *around* `GRAPH_TABLE`, its
+`ORDER BY`, `DISTINCT` and aggregation. Those raise rather than answering
+wrongly, which is the honest kind of gap.
 
-The element `WHERE` and the path functions were both in that list when these
-scenarios were written, and both now pass. That is the intended life cycle: a
-gap becomes visible, then it becomes a passing test.
+The interesting kind is now gone. When these scenarios were written the engine
+parsed and then silently discarded the element `WHERE`, the path functions and
+the reducing path prefixes: three groups where a query was accepted, nothing
+was raised, and the answer was wrong. All three now pass. That is what the
+xfail table is for, and the whole argument for this suite in one paragraph: a
+scenario is the only thing that tells a wrong answer from a right one.
 
 Record the equivalent number for your binding. Comparing counts is the only
 reliable way to tell a regression you introduced from a gap you inherited.
