@@ -54,8 +54,8 @@ def pandas_to_spark(pdf, spark):
 #
 # This table describes ProGraph, not SQL/PGQ. Nothing in it is a statement
 # about the standard, and a scenario is never removed from features/ because an
-# engine cannot run it — that would quietly shrink the specification to fit the
-# implementation. An entry whose scenario starts passing shows up as XPASS and
+# engine cannot run it, because that would quietly shrink the specification to
+# fit the implementation. An entry whose scenario starts passing shows up as XPASS and
 # should be deleted.
 
 SKIP_TAGS = set()  # Tags to skip entirely

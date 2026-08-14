@@ -2,7 +2,7 @@
 
 [![TCK](https://github.com/sql-pgq/tck/actions/workflows/tck.yml/badge.svg)](https://github.com/sql-pgq/tck/actions/workflows/tck.yml)
 
-A Technology Compatibility Kit for **SQL/PGQ** — SQL:2023 Part 16 (ISO/IEC
+A Technology Compatibility Kit for **SQL/PGQ**: SQL:2023 Part 16 (ISO/IEC
 9075-16), the property-graph query extension to SQL.
 
 The suite is a set of executable scenarios written in Gherkin. Each one states a
@@ -19,7 +19,7 @@ document behind a paywall; there is no shared, executable statement of what
 That is the condition dialects grow in. Two engines read the same clause, reach
 defensible but different conclusions, ship, and by the time anyone compares
 them the difference is load-bearing in someone's production query. The
-divergences that matter are rarely the dramatic ones — they are off-by-ones in
+divergences that matter are rarely the dramatic ones. They are off-by-ones in
 `SUBSTRING`, disagreements about whether an unmatched optional pattern drops the
 row, edge direction on an undirected pattern. Small, plausible, and invisible
 without a shared test.
@@ -32,7 +32,7 @@ later.
 **This suite is small.** It covers a usable slice of `GRAPH_TABLE` and
 property-graph DDL, not the standard. See [Coverage](#coverage) for exactly
 what exists. A green run means "conforms on the covered subset" and never
-"conforms to SQL/PGQ", and the coverage table is the claim — please read it
+"conforms to SQL/PGQ", and the coverage table is the claim, so please read it
 before quoting a pass rate.
 
 ## Modeled on the openCypher TCK
@@ -59,7 +59,7 @@ openCypher has `Match1.feature` through `Match9.feature`; this has
 readable and a new area is a new file, not an edit to a large one.
 
 **Results are compared unordered by default.** The step is spelled exactly as
-openCypher spells it — `Then the result should be, in any order:` — so that
+openCypher spells it, `Then the result should be, in any order:`, so that
 ordering is asserted only where a scenario means to assert it.
 
 **Apache 2.0**, following the same precedent.
@@ -72,7 +72,7 @@ Where it differs, it differs because SQL/PGQ is not Cypher:
   `CREATE PROPERTY GRAPH` statement and the tables it maps over, which makes the
   table-to-graph mapping part of the specification rather than setup hidden in a
   fixture.
-- There is no `And no side effects` step. The covered subset is read-only —
+- There is no `And no side effects` step. The covered subset is read-only:
   SQL/PGQ as standardised has no graph mutation of its own.
 - Bindings live in this repository rather than only in implementers' trees, so
   that at least one runnable example of a binding ships with the suite.
@@ -80,7 +80,7 @@ Where it differs, it differs because SQL/PGQ is not Cypher:
 ## Layout
 
 ```
-features/                     # the specification — pure Gherkin, no engine
+features/                     # the specification: pure Gherkin, no engine
 ├── ddl/                      # CREATE PROPERTY GRAPH
 └── graph_table/              # GRAPH_TABLE queries, expressions, quantifiers
 implementations/              # bindings, one per language or system
@@ -112,8 +112,8 @@ The Python binding takes `--backend=pandas` (default) or `--backend=spark`.
 The Python binding drives [ProGraph](https://gitlab.com/briceg/prograph):
 `conftest.py` imports `prograph` and builds an engine per scenario. That is a
 property of *the binding*, which is why the engine is an optional extra rather
-than a dependency — a second implementation's binding should not have to
-install the first one's engine to run the suite.
+than a dependency. A second implementation's binding should not have to install
+the first one's engine to run the suite.
 
 ### Scenarios a run is allowed to skip
 
@@ -126,7 +126,7 @@ That table describes **the engine**, not the standard. Keeping the list explicit
 and small is the point: a silently skipped conformance test reads exactly like a
 passing one, which is the failure mode a TCK exists to prevent. `xfail_strict`
 is on, so an entry whose scenario starts passing fails the build until the entry
-is removed — the list is not allowed to accumulate claims that stopped being
+is removed. The list is not allowed to accumulate claims that stopped being
 true.
 
 ## Writing a binding
@@ -142,8 +142,8 @@ features use. There are four:
 | `Then the result should be, in any order:` | compare rows, ignoring order |
 
 No feature file changes. If a scenario cannot be expressed against your engine,
-that is a finding worth opening an issue about — it usually means the scenario
-encodes an interpretation that deserves to be argued in public.
+that is a finding worth opening an issue about, because it usually means the
+scenario encodes an interpretation that deserves to be argued in public.
 
 ## Coverage
 
@@ -161,7 +161,7 @@ encodes an interpretation that deserves to be argued in public.
 Known to be absent, listed so the gaps are visible rather than merely unmet:
 
 - `ONE ROW PER MATCH` / `ONE ROW PER VERTEX` / `ONE ROW PER STEP`
-- Path modes and search prefixes — `TRAIL`, `ACYCLIC`, `ANY`, `ALL SHORTEST`
+- Path modes and search prefixes: `TRAIL`, `ACYCLIC`, `ANY`, `ALL SHORTEST`
 - `PROPERTIES ARE ALL COLUMNS`, label expressions, `IS LABELED`
 - Literals and the type system as a category of their own
 - Anything in the outer SQL query beyond the handful of tagged scenarios
@@ -191,7 +191,7 @@ tracer bullet for SQL/PGQ conformance. Commit history is preserved.
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0. See [LICENSE](LICENSE).
 
 ## Acknowledgments
 

@@ -1,7 +1,7 @@
 # Contributing
 
 The most valuable contribution is a scenario. The suite's usefulness is bounded
-by its coverage, and the coverage is small — see the absent list in the
+by its coverage, and the coverage is small. See the absent list in the
 [README](README.md#coverage) for where the holes are.
 
 ## The one rule
@@ -11,7 +11,7 @@ pass it.**
 
 That is the whole discipline. The moment scenarios bend to fit implementations,
 the suite stops describing SQL/PGQ and starts describing whatever the
-implementations happen to do — which is the exact drift a TCK exists to catch.
+implementations happen to do, which is the exact drift a TCK exists to catch.
 If your engine fails a scenario, the options are to fix the engine, or to add
 the tag to your binding's `XFAIL_TAGS` with a reason, or to argue in an issue
 that the scenario is *wrong about the standard*. All three are fine. Editing the
@@ -19,7 +19,7 @@ scenario quietly is not.
 
 The corollary: `XFAIL_TAGS` entries are debts, listed in the open so they can be
 paid. `xfail_strict` is on, so an entry whose scenario starts passing fails the
-build until it is removed. That is deliberate — it stops the list from
+build until it is removed. That is deliberate: it stops the list from
 accumulating claims that stopped being true.
 
 ## Adding a scenario
@@ -46,7 +46,7 @@ unwieldy.
 
 Conventions, all inherited from the openCypher TCK:
 
-- **Number the scenario** — `[16]` — sequentially within its file. The number
+- **Number the scenario** (`[16]`) sequentially within its file. The number
   is how a bug report cites it, so it must not be reused when a scenario is
   removed.
 - **Tag it** with the construct it exercises. Bindings map tags to xfails, so an
@@ -71,7 +71,7 @@ Say so, in a comment above the scenario, naming the reading you assumed:
 
 An interpretation stated in the open can be argued with; one buried in an
 assertion just looks like a fact. Scenarios that encode a contested reading are
-still worth having — they are how the disagreement becomes visible.
+still worth having, because they are how the disagreement becomes visible.
 
 ## Adding a binding
 
@@ -84,7 +84,7 @@ Create a sibling directory under `implementations/` and implement four steps:
 | `When executing SQL/PGQ:` | run the query, capture rows or the error |
 | `Then the result should be, in any order:` | compare rows, ignoring order |
 
-No feature file changes — if you find yourself needing one, that is a finding
+No feature file changes. If you find yourself needing one, that is a finding
 worth an issue rather than a patch. `implementations/python/` is a working
 example, not a template you have to follow.
 
@@ -105,7 +105,7 @@ One area at a time:
 pytest implementations/python/test_graph_table.py -k substring
 ```
 
-CI runs the same thing on 3.9, 3.11 and 3.12, plus weekly — the weekly build is
+CI runs the same thing on 3.9, 3.11 and 3.12, plus weekly. The weekly build is
 there because the engine under test moves independently of this repo.
 
 ## Reporting a divergence
