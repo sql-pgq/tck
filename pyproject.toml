@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "sql-pgq-tck"
 version = "0.1.0"
@@ -19,6 +23,14 @@ python = [
 # The reference binding drives ProGraph, which is installed separately — see the
 # README. It is deliberately not an extra here: the TCK must never depend on the
 # engine it tests, or another implementation's binding inherits this one's.
+
+# Nothing here is an importable package: features/ is Gherkin and the bindings
+# are pytest modules collected by path. Left to itself setuptools sees two
+# top-level directories, decides the layout is ambiguous, and refuses to build —
+# which is what `pip install -e .` did until this line existed. The project
+# exists to carry dependencies and pytest configuration, so discovery is off.
+[tool.setuptools]
+py-modules = []
 
 [tool.pytest.ini_options]
 testpaths = ["implementations/python"]
