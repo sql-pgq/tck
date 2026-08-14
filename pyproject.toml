@@ -16,10 +16,9 @@ python = [
     "pytest-bdd>=6.0",
     "pandas>=1.5",
 ]
-# The reference binding drives ProGraph. Installed separately so the TCK never
-# depends on the engine it tests by default: another implementation's binding
-# should not have to install this one's.
-prograph = ["prograph"]
+# The reference binding drives ProGraph, which is installed separately — see the
+# README. It is deliberately not an extra here: the TCK must never depend on the
+# engine it tests, or another implementation's binding inherits this one's.
 
 [tool.pytest.ini_options]
 testpaths = ["implementations/python"]

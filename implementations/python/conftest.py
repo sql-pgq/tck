@@ -9,6 +9,9 @@ Supports both Pandas and Spark backends via --backend option:
 """
 
 import os
+import pathlib
+import re
+
 import pytest
 from pytest_bdd import given, when, then, parsers
 import pandas as pd
@@ -45,34 +48,21 @@ def pandas_to_spark(pdf, spark):
 # -----------------------------------------------------------------------------
 # Implementation-specific tag handling
 # -----------------------------------------------------------------------------
-# Tags mark optional or implementation-dependent features.
-# Implementations can configure which tags to skip/xfail here.
+# Every scenario carries a tag naming the construct it exercises. A binding
+# whose engine does not implement that construct lists the tag here with a
+# reason, and the scenario becomes an xfail instead of a failure.
+#
+# This table describes ProGraph, not SQL/PGQ. Nothing in it is a statement
+# about the standard, and a scenario is never removed from features/ because an
+# engine cannot run it — that would quietly shrink the specification to fit the
+# implementation. An entry whose scenario starts passing shows up as XPASS and
+# should be deleted.
 
 SKIP_TAGS = set()  # Tags to skip entirely
 XFAIL_TAGS = {
-    # Node/Edge pattern features
-    'LabellessMatch': 'Label-less node matching not yet implemented',
-    # 'LikeOperator': 'LIKE operator not yet implemented in SQL/PGQ',  # Now implemented
-    # 'IsNullCondition': 'IS NULL condition not yet implemented',  # Now implemented
-    # 'InListCondition': 'IN list condition not yet implemented',  # Now implemented
-    # 'BetweenCondition': 'BETWEEN condition not yet implemented',  # Now implemented
-    # 'SelfLoop': 'Self-loop detection not yet implemented',  # Now working
-    # DDL features
+    # DDL
     'NoPropertiesClause': 'NO PROPERTIES clause not yet implemented',
-    # Path quantifiers - now implemented
-    # 'PathQuantifier': 'Path quantifiers ({n,m}) not yet implemented',
-    # Expression features
-    # 'ArithmeticExpression': 'Arithmetic expressions in COLUMNS not yet implemented',  # Now implemented
-    # 'StringConcatenation': 'String concatenation not yet implemented',  # Now implemented
-    # 'LiteralValues': 'Literal values in COLUMNS not yet implemented',  # Now implemented
-    # 'NegativeNumbers': 'Negative numbers not yet implemented',  # Now implemented
-    # 'ParenthesizedExpression': 'Parenthesized expressions not yet implemented',  # Now implemented
-    # 'CaseExpression': 'CASE expressions not yet implemented',  # Now implemented
-    # 'CoalesceFunction': 'COALESCE function not yet implemented',  # Now implemented
-    # 'NullIfFunction': 'NULLIF function not yet implemented',  # Now implemented
-    # 'CastExpression': 'CAST expression not yet implemented',  # Now implemented
-    # 'SubstringFunction': 'SUBSTRING function not yet implemented',  # Now implemented
-    # SQL outer query features
+    # SQL query surrounding the GRAPH_TABLE
     'OuterOrderBy': 'ORDER BY in outer query not yet implemented',
     'OuterDistinct': 'DISTINCT in outer query not yet implemented',
     'Aggregation': 'SQL aggregation functions not yet implemented',
@@ -103,11 +93,29 @@ def pytest_addoption(parser):
     )
 
 
+FEATURES_DIR = pathlib.Path(__file__).resolve().parents[2] / "features"
+_TAG_RE = re.compile(r"^\s*@(\w+)", re.MULTILINE)
+
+
+def _feature_tags():
+    """Every tag used anywhere in features/.
+
+    pytest-bdd turns each Gherkin tag into a pytest mark, so registering only
+    the ones this binding xfails leaves the rest unknown and a clean run warns
+    about them. The warnings are harmless and that is the problem: noise on a
+    green run is how real warnings get overlooked.
+    """
+    tags = set()
+    for path in FEATURES_DIR.rglob("*.feature"):
+        tags.update(_TAG_RE.findall(path.read_text(encoding="utf-8")))
+    return tags
+
+
 def pytest_configure(config):
-    """Register custom markers to avoid warnings."""
-    for tag in SKIP_TAGS | XFAIL_TAGS.keys():
+    """Register the Gherkin tags as markers, and record the backend choice."""
+    for tag in sorted(_feature_tags() | SKIP_TAGS | set(XFAIL_TAGS)):
         config.addinivalue_line(
-            "markers", f"{tag}: SQL/PGQ TCK implementation-specific tag"
+            "markers", f"{tag}: SQL/PGQ TCK scenario tag"
         )
     # Store backend choice for access in fixtures
     config.backend = config.getoption("--backend")

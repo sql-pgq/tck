@@ -1,39 +1,100 @@
-# SQL/PGQ Technology Compatibility Kit (TCK)
+# SQL/PGQ TCK
 
-A test suite for SQL/PGQ (SQL:2023 Property Graph Queries) implementations.
+A Technology Compatibility Kit for **SQL/PGQ** — SQL:2023 Part 16 (ISO/IEC
+9075-16), the property-graph query extension to SQL.
 
-## Overview
+The suite is a set of executable scenarios written in Gherkin. Each one states a
+property graph, a query, and the rows the query must return. Nothing in
+`features/` knows what engine will run it.
 
-SQL/PGQ is Part 16 of the SQL:2023 standard (ISO/IEC 9075-16), adding property
-graph query capabilities to SQL. This TCK provides executable specifications to
-verify implementation conformance.
+## Why this exists
 
-**Status**: Early development. The feature files cover a usable slice of
-`GRAPH_TABLE` and property-graph DDL, not the standard — see
-[Coverage](#coverage) for what exists and what does not. Treat a passing run as
-"conforms on the covered subset", never as "conforms to SQL/PGQ".
+SQL/PGQ is being implemented independently and roughly simultaneously by
+warehouses, relational databases and virtual-graph layers. The standard is a
+document behind a paywall; there is no shared, executable statement of what
+`GRAPH_TABLE` actually does.
 
-## Structure
+That is the condition dialects grow in. Two engines read the same clause, reach
+defensible but different conclusions, ship, and by the time anyone compares
+them the difference is load-bearing in someone's production query. The
+divergences that matter are rarely the dramatic ones — they are off-by-ones in
+`SUBSTRING`, disagreements about whether an unmatched optional pattern drops the
+row, edge direction on an undirected pattern. Small, plausible, and invisible
+without a shared test.
+
+A TCK does not prevent that by authority. It has none. It works by making
+disagreement *cheap to discover*: an implementer runs the suite, sees a red
+scenario, and finds out in an afternoon rather than from a bug report two years
+later.
+
+**This suite is small.** It covers a usable slice of `GRAPH_TABLE` and
+property-graph DDL, not the standard. See [Coverage](#coverage) for exactly
+what exists. A green run means "conforms on the covered subset" and never
+"conforms to SQL/PGQ", and the coverage table is the claim — please read it
+before quoting a pass rate.
+
+## Modeled on the openCypher TCK
+
+The [openCypher TCK](https://github.com/opencypher/openCypher/tree/master/tck)
+solved this problem for Cypher, and it solved it well enough that copying its
+structure was the obvious move. The borrowings are deliberate:
+
+**The specification is separate from anything that runs it.** openCypher keeps
+pure Gherkin in `tck/features/` and leaves step definitions to implementers.
+Here, `features/` is the artifact and every binding lives under
+`implementations/`. This is the load-bearing decision: it is what lets a second
+implementation adopt the suite by writing a binding rather than by forking, and
+it is why a scenario is never deleted because some engine cannot pass it.
+
+**Scenarios are numbered within a feature.** `Scenario: [1] Arithmetic addition
+in COLUMNS`, matching openCypher's `Scenario: [1] Match non-existent nodes
+returns empty`. Numbering gives a scenario a stable name to cite in a bug
+report, independent of its wording.
+
+**Feature files are grouped by construct and numbered when they grow.**
+openCypher has `Match1.feature` through `Match9.feature`; this has
+`NodePatterns1/2`, `EdgePatterns1/2`, `CreatePropertyGraph1/2`. Files stay
+readable and a new area is a new file, not an edit to a large one.
+
+**Results are compared unordered by default.** The step is spelled exactly as
+openCypher spells it — `Then the result should be, in any order:` — so that
+ordering is asserted only where a scenario means to assert it.
+
+**Apache 2.0**, following the same precedent.
+
+Where it differs, it differs because SQL/PGQ is not Cypher:
+
+- openCypher scenarios start from `Given an empty graph` and build with Cypher
+  `CREATE`. SQL/PGQ has no such literal: a graph is a *view over base tables*.
+  So each feature opens with a `Background:` holding a
+  `CREATE PROPERTY GRAPH` statement and the tables it maps over, which makes the
+  table-to-graph mapping part of the specification rather than setup hidden in a
+  fixture.
+- There is no `And no side effects` step. The covered subset is read-only —
+  SQL/PGQ as standardised has no graph mutation of its own.
+- Bindings live in this repository rather than only in implementers' trees, so
+  that at least one runnable example of a binding ships with the suite.
+
+## Layout
 
 ```
-features/                     # Gherkin feature files — the specification
+features/                     # the specification — pure Gherkin, no engine
 ├── ddl/                      # CREATE PROPERTY GRAPH
 └── graph_table/              # GRAPH_TABLE queries, expressions, quantifiers
-implementations/              # Step definitions, one per language/system
-└── python/                   # pytest-bdd, currently bound to ProGraph
+implementations/              # bindings, one per language or system
+└── python/                   # pytest-bdd, currently driving ProGraph
 ```
-
-The split matters: **`features/` is the artifact**. It is pure Gherkin with no
-engine in it, so a second implementation adds a sibling under
-`implementations/` and reuses every scenario unchanged.
 
 ## Running
 
 ```bash
-pip install -e ".[python]"      # pytest, pytest-bdd, pandas
-pip install prograph            # the engine the reference binding drives
+pip install -e ".[python]"                                   # pytest, pytest-bdd, pandas
+pip install "prograph @ git+https://gitlab.com/briceg/prograph.git"   # the engine the binding drives
 pytest
 ```
+
+ProGraph is not on PyPI yet, hence the source install; it is not a dependency of
+this package and nothing but the Python binding needs it.
 
 `pytest` from the repo root picks up `implementations/python` via
 `pyproject.toml`. To run one area:
@@ -42,63 +103,95 @@ pytest
 pytest implementations/python/test_graph_table.py -k substring
 ```
 
-### Bindings and the engine under test
+The Python binding takes `--backend=pandas` (default) or `--backend=spark`.
 
-The Python binding currently drives [ProGraph](https://gitlab.com/briceg/prograph)
-directly — `conftest.py` imports `prograph` and builds a `ProGraph` engine per
-scenario. That is a property of the *binding*, not of the TCK: the engine is not
-a dependency of this project, which is why it is an optional extra rather than a
-hard requirement. Pointing the suite at another SQL/PGQ implementation means
-writing a new binding, not editing the features.
+### The engine under test
+
+The Python binding drives [ProGraph](https://gitlab.com/briceg/prograph):
+`conftest.py` imports `prograph` and builds an engine per scenario. That is a
+property of *the binding*, which is why the engine is an optional extra rather
+than a dependency — a second implementation's binding should not have to
+install the first one's engine to run the suite.
 
 ### Scenarios a run is allowed to skip
 
-`conftest.py` carries a table of tags mapped to "not yet implemented" reasons,
-applied as xfail. That table describes **the binding's engine**, not the
-standard — an implementation that supports a construct should delete its entry
-and watch the scenario pass. Keeping the list explicit is the point: a silently
-skipped conformance test reads exactly like a passing one.
+Every scenario carries a tag naming the construct it exercises
+(`@PathQuantifier`, `@CaseExpression`, …). A binding lists tags its engine does
+not implement in `XFAIL_TAGS`, with a reason, and those scenarios become xfails
+instead of failures.
+
+That table describes **the engine**, not the standard. An entry whose scenario
+starts passing surfaces as `XPASS` and should be deleted. Keeping the list
+explicit and small is the point: a silently skipped conformance test reads
+exactly like a passing one, which is the failure mode a TCK exists to prevent.
+
+## Writing a binding
+
+Add a sibling directory under `implementations/` and implement the steps the
+features use. There are four:
+
+| Step | Meaning |
+|---|---|
+| `Given property graph "g" with schema:` | execute the given `CREATE PROPERTY GRAPH` DDL |
+| `And table "t" with data:` | load the given rows as the named base table |
+| `When executing SQL/PGQ:` | run the query, capture rows or the error |
+| `Then the result should be, in any order:` | compare rows, ignoring order |
+
+No feature file changes. If a scenario cannot be expressed against your engine,
+that is a finding worth opening an issue about — it usually means the scenario
+encodes an interpretation that deserves to be argued in public.
 
 ## Coverage
 
-| Category | Feature files | Status |
+97 scenarios (99 tests, after one `Scenario Outline` expands).
+
+| Area | Files | Scenarios |
 |---|---|---|
-| DDL | `CreatePropertyGraph1/2` | Tracer |
-| Node patterns | `NodePatterns1/2` | Tracer |
-| Edge patterns | `EdgePatterns1/2` | Tracer |
-| Expressions | `Expressions` | Tracer |
-| Aggregations | `Aggregations` | Tracer |
-| Path quantifiers | `PathQuantifiers` | Tracer |
-| Clauses (WHERE, ORDER BY, COLUMNS) | — | Planned |
-| Literals | — | Planned |
+| Property-graph DDL | `CreatePropertyGraph1/2` | 20 |
+| Node patterns | `NodePatterns1/2` | 20 |
+| Edge patterns | `EdgePatterns1/2` | 20 |
+| Expressions and functions | `Expressions` | 15 |
+| Aggregation | `Aggregations` | 10 |
+| Path quantifiers | `PathQuantifiers` | 12 |
+
+Known to be absent, listed so the gaps are visible rather than merely unmet:
+
+- `ONE ROW PER MATCH` / `ONE ROW PER VERTEX` / `ONE ROW PER STEP`
+- Path modes and search prefixes — `TRAIL`, `ACYCLIC`, `ANY`, `ALL SHORTEST`
+- `PROPERTIES ARE ALL COLUMNS`, label expressions, `IS LABELED`
+- Literals and the type system as a category of their own
+- Anything in the outer SQL query beyond the handful of tagged scenarios
 
 ## Baseline
 
-Against ProGraph at the time of the split: **85 passed, 13 xfailed, 1 xpassed**.
+Against ProGraph, at the time of writing: **86 passed, 13 xfailed, 0 failed.**
 
-An xpassed scenario is a tag in the skip table whose engine caught up — the
-entry should be removed. Record the baseline whenever you change bindings;
-comparing counts is the only way to tell a new failure from an inherited one.
+Record the equivalent number for your binding. Comparing counts is the only
+reliable way to tell a regression you introduced from a gap you inherited.
 
-## Design principles
+## Contributing
 
-1. **Language-agnostic** — feature files are pure Gherkin; implementations
-   provide step definitions.
-2. **Spec-aligned** — scenarios reflect SQL:2023 Part 16 where possible, and say
-   so when they encode an interpretation rather than the text.
-3. **Incremental** — start with core features, expand on implementation feedback.
-4. **Honest about scope** — the coverage table above is the claim; nothing
-   broader is implied by a green run.
+Scenarios are the contribution that matters most, particularly in the areas
+listed as absent above. A scenario that encodes an *interpretation* of the
+standard rather than its plain text should say so in a comment — being explicit
+about which reading a test assumes is what makes disagreement about it
+productive.
+
+Bug reports that cite a scenario number and a failing engine are the second most
+useful thing.
 
 ## History
 
-Extracted from the [ProGraph](https://gitlab.com/briceg/prograph) repository,
-where it began as a tracer bullet. Commit history is preserved.
+Extracted with `git subtree split` from the
+[ProGraph](https://gitlab.com/briceg/prograph) repository, where it began as a
+tracer bullet for SQL/PGQ conformance. Commit history is preserved.
 
 ## License
 
-Apache License 2.0 (following the openCypher TCK precedent).
+Apache License 2.0 — see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-Inspired by the [openCypher TCK](https://github.com/opencypher/openCypher/tree/master/tck).
+The [openCypher TCK](https://github.com/opencypher/openCypher/tree/master/tck),
+for the structure and for demonstrating that a shared executable specification
+is worth the trouble.
