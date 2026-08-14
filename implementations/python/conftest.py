@@ -70,8 +70,6 @@ XFAIL_TAGS = {
     # wrong. The engine returns unfiltered rows for an element WHERE, every
     # path for a reducing prefix, and NULL for a path function. Recorded here
     # so the gap is visible while it is fixed.
-    'ElementWhere': 'WHERE inside an element pattern is parsed and ignored, '
-                    'so the pattern returns unfiltered rows',
     'PathPrefixAny': 'ANY is parsed and ignored, so every matching path is '
                      'returned rather than one',
     'PathPrefixShortest': 'ALL/ANY SHORTEST and SHORTEST k are parsed and '

@@ -172,14 +172,18 @@ Known to be absent, listed so the gaps are visible rather than merely unmet:
 
 ## Baseline
 
-Against ProGraph, at the time of writing: **112 passed, 30 xfailed, 0 failed.**
+Against ProGraph, at the time of writing: **119 passed, 23 xfailed, 0 failed.**
 
 Most of those xfails are worth reading. They are not unimplemented syntax that
 raises; they are constructs the engine parses and then discards, so the query
-is accepted, nothing is raised, and the answer is wrong: an element `WHERE`
-returns unfiltered rows, a reducing path prefix returns every path, and a path
-function returns NULL. A scenario is the only thing that tells those apart from
-working, which is the argument for this suite in one paragraph.
+is accepted, nothing is raised, and the answer is wrong: a reducing path prefix
+returns every path, and a path function returns NULL. A scenario is the only
+thing that tells those apart from working, which is the argument for this suite
+in one paragraph.
+
+The element `WHERE` was in that list until these scenarios were written. It is
+now implemented and its seven scenarios pass, which is the intended life cycle:
+a gap becomes visible, then it becomes a passing test.
 
 Record the equivalent number for your binding. Comparing counts is the only
 reliable way to tell a regression you introduced from a gap you inherited.
