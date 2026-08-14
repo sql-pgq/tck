@@ -59,11 +59,10 @@ def pandas_to_spark(pdf, spark):
 # should be deleted.
 
 SKIP_TAGS = set()  # Tags to skip entirely
-XFAIL_TAGS = {
-    # SQL query surrounding the GRAPH_TABLE
-    'OuterOrderBy': 'ORDER BY in outer query not yet implemented',
-    'OuterDistinct': 'DISTINCT in outer query not yet implemented',
-    'Aggregation': 'SQL aggregation functions not yet implemented',
+XFAIL_TAGS: dict = {
+    # Empty. Every construct the features exercise is implemented by the
+    # reference binding's engine. Add an entry here when a scenario describes
+    # something an engine does not do, with a reason saying what happens.
 }
 
 
@@ -239,8 +238,17 @@ def execute_sqlpgq(context, docstring):
     try:
         builder = context.get('builder')
         if builder:
-            plan = builder.build(query)
-            context['plan'] = plan
+            # Best-effort. The plan is only read by the DDL scenarios, and not
+            # every valid query is one the plan builder parses: SQL/PGQ's
+            # grammar covers GRAPH_TABLE and the clauses around it, so a
+            # derived table or a GROUP BY belongs to the surrounding SQL and is
+            # the engine's business. Letting a build failure here abort the
+            # step meant those scenarios never executed at all, and reported
+            # "no result" rather than whatever the engine would have said.
+            try:
+                context['plan'] = builder.build(query)
+            except Exception:
+                context['plan'] = None
 
             # If we have tables and a GRAPH_TABLE query, execute it
             if context.get('tables') and 'GRAPH_TABLE' in query.upper():

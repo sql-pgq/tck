@@ -91,12 +91,16 @@ implementations/              # bindings, one per language or system
 
 ```bash
 pip install -e ".[python]"                                   # pytest, pytest-bdd, pandas
-pip install "prograph @ git+https://gitlab.com/briceg/prograph.git"   # the engine the binding drives
+pip install "prograph[sqlpgq] @ git+https://gitlab.com/briceg/prograph.git"   # the engine the binding drives
 pytest
 ```
 
 ProGraph is not on PyPI yet, hence the source install; it is not a dependency of
-this package and nothing but the Python binding needs it.
+this package and nothing but the Python binding needs it. The `sqlpgq` extra
+pulls in the SQL engine ProGraph uses for the SQL *around* `GRAPH_TABLE`, which
+six scenarios need (GROUP BY, HAVING, and a derived table). Without it those
+six fail rather than being skipped, which is deliberate: an install that cannot
+run part of the suite should say so.
 
 `pytest` from the repo root picks up `implementations/python` via
 `pyproject.toml`. To run one area:
@@ -172,7 +176,7 @@ Known to be absent, listed so the gaps are visible rather than merely unmet:
 
 ## Baseline
 
-Against ProGraph, at the time of writing: **129 passed, 13 xfailed, 0 failed.**
+Against ProGraph, at the time of writing: **142 passed, 0 xfailed, 0 failed.**
 
 The xfails that remain are all in the SQL *around* `GRAPH_TABLE`, its
 `ORDER BY`, `DISTINCT` and aggregation. Those raise rather than answering

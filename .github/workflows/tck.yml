@@ -36,7 +36,7 @@ jobs:
         # ProGraph is not on PyPI, and this tracks its tip rather than a
         # release: a red build caused by an engine change is a result, not a
         # nuisance. That is the whole point of running conformance in CI.
-        run: pip install "prograph @ git+https://gitlab.com/briceg/prograph.git"
+        run: pip install "prograph[sqlpgq] @ git+https://gitlab.com/briceg/prograph.git"
 
       - name: Run the TCK
         # xfail_strict is on, so a scenario that starts passing fails the build
