@@ -64,6 +64,22 @@ XFAIL_TAGS = {
     'OuterOrderBy': 'ORDER BY in outer query not yet implemented',
     'OuterDistinct': 'DISTINCT in outer query not yet implemented',
     'Aggregation': 'SQL aggregation functions not yet implemented',
+
+    # Parsed and then discarded. These are worse than an unimplemented
+    # construct: the query is accepted, no error is raised, and the answer is
+    # wrong. The engine returns unfiltered rows for an element WHERE, every
+    # path for a reducing prefix, and NULL for a path function. Recorded here
+    # so the gap is visible while it is fixed.
+    'ElementWhere': 'WHERE inside an element pattern is parsed and ignored, '
+                    'so the pattern returns unfiltered rows',
+    'PathPrefixAny': 'ANY is parsed and ignored, so every matching path is '
+                     'returned rather than one',
+    'PathPrefixShortest': 'ALL/ANY SHORTEST and SHORTEST k are parsed and '
+                          'ignored, so path length does not reduce the result',
+    'PathLength': 'PATH_LENGTH is parsed and returns NULL',
+    'PathVertices': 'VERTICES is parsed and returns NULL',
+    'PathEdges': 'EDGES is parsed and returns NULL',
+    'ElementId': 'ELEMENT_ID is parsed and returns NULL',
 }
 
 
@@ -662,6 +678,42 @@ def result_empty(context):
     result = context.get('result')
     assert result is not None, "No result available"
     assert len(result) == 0, f"Expected empty result, got {len(result)} rows"
+
+
+# The three steps below assert *properties* of a column rather than its values.
+# They exist for constructs whose result the standard leaves to the
+# implementation, ELEMENT_ID being the case in point: a conformance suite may
+# require that an element id is present, and stable, and distinguishes distinct
+# elements, but it must not require any particular id. Pinning a literal there
+# would test ProGraph rather than SQL/PGQ.
+
+@then(parsers.parse("the result should have {count:d} row"))
+@then(parsers.parse("the result should have {count:d} rows"))
+def result_row_count(context, count):
+    """Assert the number of rows without constraining their values."""
+    result = context.get('result')
+    assert result is not None, "No result available"
+    assert len(result) == count, f"Expected {count} rows, got {len(result)}"
+
+
+@then(parsers.parse('column "{column}" should have no nulls'))
+def column_no_nulls(context, column):
+    result = context.get('result')
+    assert result is not None, "No result available"
+    assert result, "No rows to check"
+    missing = [r for r in result if column not in r]
+    assert not missing, f"Column '{column}' absent from {len(missing)} rows"
+    nulls = [r for r in result if r[column] is None]
+    assert not nulls, f"Column '{column}' was null in {len(nulls)} of {len(result)} rows"
+
+
+@then(parsers.parse('column "{column}" should have {count:d} distinct values'))
+def column_distinct_count(context, column, count):
+    result = context.get('result')
+    assert result is not None, "No result available"
+    values = {str(r.get(column)) for r in result}
+    assert len(values) == count, \
+        f"Column '{column}': expected {count} distinct values, got {len(values)} ({sorted(values)})"
 
 
 # -----------------------------------------------------------------------------

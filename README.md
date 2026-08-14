@@ -147,29 +147,39 @@ scenario encodes an interpretation that deserves to be argued in public.
 
 ## Coverage
 
-110 scenarios (112 tests, after one `Scenario Outline` expands).
+140 scenarios (142 tests, after one `Scenario Outline` expands).
 
 | Area | Files | Scenarios |
 |---|---|---|
-| Property-graph DDL | `CreatePropertyGraph1/2` | 20 |
+| Property-graph DDL | `CreatePropertyGraph1/2`, `PropertiesClause` | 28 |
 | Node patterns | `NodePatterns1/2` | 20 |
 | Edge patterns | `EdgePatterns1/2` | 20 |
 | Expressions and functions | `Expressions` | 15 |
 | Label expressions | `LabelExpressions` | 13 |
 | Path quantifiers | `PathQuantifiers` | 12 |
 | Aggregation | `Aggregations` | 10 |
+| Path prefixes | `PathPrefixes` | 8 |
+| Element WHERE | `ElementWhere` | 7 |
+| Path functions | `PathFunctions` | 7 |
 
 Known to be absent, listed so the gaps are visible rather than merely unmet:
 
 - `ONE ROW PER MATCH` / `ONE ROW PER VERTEX` / `ONE ROW PER STEP`
-- Path modes and search prefixes: `TRAIL`, `ACYCLIC`, `ANY`, `ALL SHORTEST`
-- `PROPERTIES ARE ALL COLUMNS` and `IS LABELED`
+- Path modes: `TRAIL`, `ACYCLIC`, `SIMPLE`
+- `IS LABELED`
 - Literals and the type system as a category of their own
 - Anything in the outer SQL query beyond the handful of tagged scenarios
 
 ## Baseline
 
-Against ProGraph, at the time of writing: **99 passed, 13 xfailed, 0 failed.**
+Against ProGraph, at the time of writing: **112 passed, 30 xfailed, 0 failed.**
+
+Most of those xfails are worth reading. They are not unimplemented syntax that
+raises; they are constructs the engine parses and then discards, so the query
+is accepted, nothing is raised, and the answer is wrong: an element `WHERE`
+returns unfiltered rows, a reducing path prefix returns every path, and a path
+function returns NULL. A scenario is the only thing that tells those apart from
+working, which is the argument for this suite in one paragraph.
 
 Record the equivalent number for your binding. Comparing counts is the only
 reliable way to tell a regression you introduced from a gap you inherited.
