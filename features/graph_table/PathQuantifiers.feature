@@ -112,7 +112,7 @@ Feature: PathQuantifiers - Variable-length path matching
       | Alice | Charlie |
 
   @PathQuantifier
-  Scenario: [6] Match any path * (equivalent to {1,})
+  Scenario: [6] Match any path * (equivalent to {0,})
     When executing SQL/PGQ:
       """
       SELECT * FROM GRAPH_TABLE (g
@@ -123,6 +123,7 @@ Feature: PathQuantifiers - Variable-length path matching
       """
     Then the result should be, in any order:
       | start | end     |
+      | Alice | Alice   |
       | Alice | Bob     |
       | Alice | Charlie |
       | Alice | Diana   |
