@@ -282,7 +282,7 @@ def execute_sqlpgq(context, docstring):
                         engine.execute(schema_ddl, language='sqlpgq')
 
                     # Execute the query
-                    result = engine.execute(query, language='sqlpgq')
+                    result = engine.execute(query, language='sqlpgq', return_type='list')
                     context['result'] = result
 
         context['error'] = None
